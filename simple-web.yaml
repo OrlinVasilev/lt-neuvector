@@ -1,0 +1,64 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: simple-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: simple-web
+  template:
+    metadata:
+      labels:
+        app: simple-web
+    spec:
+      containers:
+        - name: simple-web
+          image: nginx:latest
+          ports:
+            - containerPort: 80
+          volumeMounts:
+          - name: workdir
+            mountPath: /usr/share/nginx/html
+      initContainers:
+        - name: setup
+          image: busybox:1.28
+          command: ['sh', '-c', '/bin/echo Cyber Security Talks - Jan 14th 2025! >> /web/index.html']
+          volumeMounts:
+          - name: workdir
+            mountPath: "/web"
+      volumes:
+      - name: workdir
+        emptyDir: {}
+---
+# https://kubernetes.io/docs/concepts/services-networking/service/
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc-simple-web
+spec:
+  selector:
+    app: simple-web
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-simple-web
+spec:
+#  ingressClassName: nginx
+  rules:
+  - host: "192-168-8-50.nip.io"
+    http:
+      paths:
+      - pathType: Prefix
+        path: "/"
+        backend:
+          service:
+            name: svc-simple-web
+            port:
+              number: 80
